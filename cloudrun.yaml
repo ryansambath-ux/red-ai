@@ -1,0 +1,12 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: red-ai
+spec:
+  template:
+    spec:
+      containers:
+        - image: RED_IMAGE
+          env:
+            - name: RED_ENV
+              value: production
