@@ -1,6 +1,6 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>RED</title><style>
+<title>RED</title><link rel="manifest" href="/manifest.json"><style>
 body{font-family:system-ui;background:#080b10;color:#e9f1ff;margin:0}main{max-width:850px;margin:40px auto;padding:20px}
 h1{font-size:48px;margin:0;color:#ff4b4b}.sub{opacity:.65;margin-bottom:30px}
 #log{min-height:420px;border:1px solid #263241;border-radius:16px;padding:20px;background:#0d1219;overflow:auto}
@@ -15,4 +15,5 @@ function add(t,c){let d=document.createElement('div');d.className='msg '+c;d.tex
 f.onsubmit=async e=>{e.preventDefault();let t=q.value.trim();if(!t)return;add(t,'me');q.value='';
 try{let r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t})});let j=await r.json();add(j.reply||JSON.stringify(j),'red')}
 catch(e){add('Red Core is unreachable.','red')}};
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js');
 </script></main></body></html>
