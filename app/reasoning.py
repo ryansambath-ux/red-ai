@@ -6,23 +6,46 @@ import urllib.error
 class ReasoningEngine:
     """Provider adapter for Red's reasoning model.
 
-    No API key is stored in source. The initial adapter supports any
-    OpenAI-compatible chat endpoint configured through environment variables.
+    Secrets are never returned by diagnostics. Environment values are read
+    at request time so a Cloud Run revision always reflects its runtime config.
     """
 
-    def __init__(self):
-        self.base_url = os.getenv("AI_BASE_URL", "").rstrip("/")
-        self.api_key = os.getenv("AI_API_KEY", "")
-        self.model = os.getenv("AI_MODEL", "")
+    @staticmethod
+    def _config():
+        return {
+            "base_url": os.getenv("AI_BASE_URL", "").strip().rstrip("/"),
+            "api_key": os.getenv("AI_API_KEY", "").strip(),
+            "model": os.getenv("AI_MODEL", "").strip(),
+        }
 
     @property
     def configured(self):
-        return bool(self.base_url and self.api_key and self.model)
+        c = self._config()
+        return bool(c["base_url"] and c["api_key"] and c["model"])
+
+    def diagnostics(self):
+        c = self._config()
+        return {
+            "configured": bool(c["base_url"] and c["api_key"] and c["model"]),
+            "AI_BASE_URL": bool(c["base_url"]),
+            "AI_MODEL": bool(c["model"]),
+            "AI_API_KEY": bool(c["api_key"]),
+            "model": c["model"] or None,
+            "base_url": c["base_url"] or None,
+        }
 
     def respond(self, message: str, memories=None):
-        if not self.configured:
+        c = self._config()
+        if not (c["base_url"] and c["api_key"] and c["model"]):
+            missing = [
+                name for name, value in (
+                    ("AI_BASE_URL", c["base_url"]),
+                    ("AI_MODEL", c["model"]),
+                    ("AI_API_KEY", c["api_key"]),
+                ) if not value
+            ]
             return {
-                "reply": "My reasoning model is not configured yet.",
+                "reply": "My reasoning model is not configured yet. Missing: " + ", ".join(missing),
                 "action": "reasoning_unconfigured",
             }
 
@@ -38,7 +61,7 @@ class ReasoningEngine:
             system += "\nRelevant recent memory:\n" + memory_text
 
         payload = json.dumps({
-            "model": self.model,
+            "model": c["model"],
             "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": message},
@@ -46,10 +69,10 @@ class ReasoningEngine:
         }).encode("utf-8")
 
         request = urllib.request.Request(
-            self.base_url + "/chat/completions",
+            c["base_url"] + "/chat/completions",
             data=payload,
             headers={
-                "Authorization": "Bearer " + self.api_key,
+                "Authorization": "Bearer " + c["api_key"],
                 "Content-Type": "application/json",
             },
             method="POST",
@@ -60,6 +83,13 @@ class ReasoningEngine:
             return {
                 "reply": data["choices"][0]["message"]["content"],
                 "action": "reasoning",
+            }
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")[:1000]
+            return {
+                "reply": "My reasoning service is configured but the AI provider rejected the request.",
+                "action": "reasoning_error",
+                "error": f"HTTP {exc.code}: {body}",
             }
         except (urllib.error.URLError, KeyError, IndexError, json.JSONDecodeError) as exc:
             return {"reply": "My reasoning service is unavailable.", "action": "reasoning_error", "error": str(exc)}
