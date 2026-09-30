@@ -8,12 +8,13 @@ h1{font-size:48px;margin:0;color:#ff4b4b}.sub{opacity:.65;margin-bottom:30px}
 form{display:flex;gap:10px;margin-top:15px}input{flex:1;padding:15px;border-radius:12px;border:1px solid #344154;background:#0d1219;color:white}
 button{padding:0 22px;border:0;border-radius:12px;font-weight:700}small{opacity:.6}
 </style></head><body><main><h1>RED</h1><div class="sub">Personal AI • Core 0.4</div>
-<div id="log"><small>Red is ready.</small></div><form id="f"><input id="q" autocomplete="off" placeholder="Talk to Red…"><button>Send</button></form>
+<div id="log"><small>Red is ready.</small></div><form id="f"><input id="q" autocomplete="off" placeholder="Talk to Red…"><button>Send</button><button type="button" id="mic">🎙</button></form>
 <script>
 const f=document.querySelector('#f'),q=document.querySelector('#q'),log=document.querySelector('#log');
 function add(t,c){let d=document.createElement('div');d.className='msg '+c;d.textContent=t;log.appendChild(d);log.scrollTop=log.scrollHeight}
 f.onsubmit=async e=>{e.preventDefault();let t=q.value.trim();if(!t)return;add(t,'me');q.value='';
 try{let r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t})});let j=await r.json();add(j.reply||JSON.stringify(j),'red')}
 catch(e){add('Red Core is unreachable.','red')}};
+document.querySelector('#mic').onclick=()=>Voice.listen(t=>{q.value=t;f.requestSubmit()},s=>console.log(s));
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js');
-</script></main></body></html>
+</script></main><script src="/static/voice.js"></script></body></html>

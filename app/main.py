@@ -6,9 +6,10 @@ from app.red_core import RedCore
 from app.monitors import MonitorEngine
 from app.tasks import TaskStore
 from app.device_queue import DeviceQueue
+from app.events import EventStore
 
 app=FastAPI(title="Red AI",version="0.5.0")
-red=RedCore();monitors=MonitorEngine(red.attention);tasks=TaskStore();devices=DeviceQueue()
+red=RedCore();monitors=MonitorEngine(red.attention);tasks=TaskStore();devices=DeviceQueue();events=EventStore()
 
 class Message(BaseModel): text:str
 class TaskRequest(BaseModel): text:str; due:str|None=None
@@ -44,3 +45,9 @@ def device_next(authorization:str|None=Header(default=None)):
 @app.post("/api/device/complete")
 def device_complete(r:DeviceResult,authorization:str|None=Header(default=None)):
  agent_auth(authorization);return devices.complete(r.id,r.result)
+
+@app.get("/api/events")
+def unread_events():return {"events":events.unread()}
+
+@app.post("/api/events/{event_id}/read")
+def read_event(event_id:str):return events.mark_read(event_id) or {"ok":False}
